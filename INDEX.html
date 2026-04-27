@@ -2,109 +2,97 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>English Music Training - VERSÃO FINAL</title>
+    <title>English Training - Versão Final</title>
     <style>
         :root { --primary: #1db954; --bg: #121212; --card: #282828; --text: #fff; }
-        body { font-family: sans-serif; background: var(--bg); color: var(--text); display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); display: flex; flex-direction: column; align-items: center; padding: 20px; margin: 0; }
         .tabs { display: flex; gap: 10px; margin-bottom: 20px; }
-        .tab-btn { padding: 10px 20px; border-radius: 20px; border: none; cursor: pointer; background: var(--card); color: white; }
-        .tab-btn.active { background: var(--primary); font-weight: bold; }
+        .tab-btn { padding: 10px 25px; border-radius: 20px; border: none; cursor: pointer; background: var(--card); color: white; font-weight: bold; }
+        .tab-btn.active { background: var(--primary); }
         .container { max-width: 800px; width: 100%; text-align: center; }
-        .card { background: var(--card); padding: 20px; border-radius: 15px; margin-bottom: 20px; }
-        input, textarea { width: 90%; padding: 12px; margin: 10px 0; border-radius: 8px; border: none; background: #3e3e3e; color: white; }
-        button { background: var(--primary); color: white; border: none; padding: 12px 25px; border-radius: 25px; font-weight: bold; cursor: pointer; }
-        #video-area { width: 100%; aspect-ratio: 16/9; background: #000; border-radius: 12px; margin: 20px 0; display: none; }
-        .word-box { display: inline-block; padding: 10px; margin: 5px; border-radius: 6px; color: black; font-weight: bold; cursor: pointer; }
+        .card { background: var(--card); padding: 20px; border-radius: 15px; margin-bottom: 20px; box-shadow: 0 8px 25px rgba(0,0,0,0.5); }
+        input, textarea { width: 90%; padding: 12px; margin: 10px 0; border-radius: 8px; border: none; background: #3e3e3e; color: white; font-size: 16px; }
+        button { background: var(--primary); color: white; border: none; padding: 12px 30px; border-radius: 25px; font-weight: bold; cursor: pointer; transition: 0.3s; }
+        button:hover { background: #1ed760; transform: scale(1.02); }
+        #video-container { width: 100%; aspect-ratio: 16/9; background: #000; border-radius: 12px; margin: 20px 0; display: none; overflow: hidden; border: 2px solid #333; }
+        .word-box { display: inline-block; padding: 10px 15px; margin: 5px; border-radius: 6px; color: black; font-weight: bold; cursor: pointer; user-select: none; }
         .answer-zone { min-height: 60px; background: #1a1a1a; border-bottom: 3px solid var(--primary); margin: 15px 0; padding: 10px; border-radius: 8px; display: flex; flex-wrap: wrap; justify-content: center; gap: 5px; }
         .hidden { display: none; }
     </style>
 </head>
 <body>
+    
 
     <div class="tabs">
-        <button class="tab-btn active" onclick="alert('Base 1 Ativa')">1. Ordenação</button>
-        <button class="tab-btn" onclick="alert('Base 2 em breve')">2. Associação</button>
+        <button class="tab-btn active" id="btn-ord" onclick="tab('ord')">1. Ordenação</button>
+        <button class="tab-btn" id="btn-ass" onclick="tab('ass')">2. Associação</button>
     </div>
 
-    <div class="container">
+    <div class="container" id="base-ord">
         <div class="card">
             <h3>🎵 Passo 1: Link da Música</h3>
             <input type="text" id="videoUrl" placeholder="Cole o link do YouTube aqui">
             <button onclick="carregarVideo()">Carregar Música</button>
         </div>
 
-        <div id="video-area">
-            <div id="player" style="width: 100%; height: 100%;"></div>
-        </div>
+        <div id="video-container"></div>
 
-        <div class="card" id="lyric-section" style="display: none;">
+        <div class="card hidden" id="lyric-input-card">
             <h3>📝 Passo 2: Letra em Inglês</h3>
-            <textarea id="lyrics" rows="5" placeholder="Cole a letra aqui (pule linha entre estrofes)"></textarea>
-            <button onclick="gerarJogo()">Criar Exercício</button>
+            <textarea id="lyricsInput" rows="5" placeholder="Cole a letra aqui (pule uma linha entre as estrofes)"></textarea>
+            <button onclick="gerarExercicio()">Gerar Desafio</button>
         </div>
 
-        <div id="gameBoard"></div>
+        <div id="exercise-board"></div>
     </div>
 
-    <!-- API DO YOUTUBE -->
-    <script src="https://youtube.com"></script>
+    <div class="container hidden" id="base-ass">
+        <div class="card"><h2>Base de Associação - Em breve</h2></div>
+    </div>
 
     <script>
-        let player;
-        let apiPronta = false;
-
-        // O Google avisa quando a API está pronta
-        function onYouTubeIframeAPIReady() {
-            apiPronta = true;
-            console.log("API do YouTube carregada com sucesso.");
+        function tab(tipo) {
+            document.getElementById('base-ord').classList.toggle('hidden', tipo !== 'ord');
+            document.getElementById('base-ass').classList.toggle('hidden', tipo !== 'ass');
+            document.getElementById('btn-ord').classList.toggle('active', tipo === 'ord');
+            document.getElementById('btn-ass').classList.toggle('active', tipo === 'ass');
         }
 
         function carregarVideo() {
             const url = document.getElementById('videoUrl').value.trim();
-            if (!url) return alert("Por favor, cole um link!");
+            if(!url) return alert("Por favor, cole um link!");
 
-            // Extrator de ID simplificado
-            let videoId = "";
-            try {
-                if (url.includes("v=")) {
-                    videoId = url.split("v=")[1].substring(0, 11);
-                } else if (url.includes("youtu.be/")) {
-                    videoId = url.split("youtu.be/")[1].substring(0, 11);
-                }
-            } catch (e) {
-                return alert("Erro ao ler o link. Tente o link direto da barra de endereço.");
-            }
+            let vId = "";
+            // Regex universal para pegar ID do YouTube
+            const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+            const match = url.match(regExp);
 
-            if (videoId.length === 11) {
-                document.getElementById('video-area').style.display = "block";
-                document.getElementById('lyric-section').style.display = "block";
-
-                if (player) {
-                    player.loadVideoById(videoId);
-                } else {
-                    player = new YT.Player('player', {
-                        videoId: videoId,
-                        events: { 'onReady': () => console.log("Vídeo Pronto") }
-                    });
-                }
+            if (match && match[2].length === 11) {
+                vId = match[2];
+                const container = document.getElementById('video-container');
+                // Forçamos a reconstrução do iframe para evitar bloqueios de API
+                container.innerHTML = `<iframe width="100%" height="100%" src="https://youtube.com{vId}" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
+                container.style.display = "block";
+                document.getElementById('lyric-input-card').classList.remove('hidden');
             } else {
-                alert("ID do vídeo não reconhecido. Use links como: https://youtube.com");
+                alert("Link inválido! Certifique-se de que é um link comum do YouTube.");
             }
         }
 
-        function gerarJogo() {
-            const text = document.getElementById('lyrics').value.trim();
-            if (!text) return alert("Cole a letra da música!");
+        function gerarExercicio() {
+            const text = document.getElementById('lyricsInput').value.trim();
+            if(!text) return alert("Cole a letra da música!");
 
-            const board = document.getElementById('gameBoard');
+            const board = document.getElementById('exercise-board');
             board.innerHTML = "";
             const cores = ['#FFADAD', '#FFD6A5', '#FDFFB6', '#CAFFBF', '#9BF6FF', '#A0C4FF', '#BDB2FF'];
 
-            text.split(/\n\s*\n/).forEach((bloco, i) => {
+            const estrofes = text.split(/\n\s*\n/);
+            estrofes.forEach((bloco, index) => {
                 const card = document.createElement('div');
                 card.className = 'card';
-                card.innerHTML = `<h4>Estrofe ${i+1}</h4>`;
-                
+                card.innerHTML = `<h4>Estrofe ${index + 1}</h4>`;
+
                 const zone = document.createElement('div');
                 zone.className = 'answer-zone';
                 
@@ -117,15 +105,17 @@
                     span.className = 'word-box';
                     span.innerText = p;
                     span.style.background = cores[Math.floor(Math.random() * cores.length)];
-                    span.onclick = () => span.parentNode === pool ? zone.appendChild(span) : pool.appendChild(span);
+                    span.onclick = () => {
+                        if(span.parentNode === pool) zone.appendChild(span);
+                        else pool.appendChild(span);
+                    };
                     pool.appendChild(span);
                 });
 
-                card.appendChild(zone);
-                card.appendChild(pool);
+                card.append(zone, pool);
                 board.appendChild(card);
             });
-            alert("Exercício gerado com sucesso! Role para baixo.");
+            alert("Exercícios gerados! Ouça a música e ordene as palavras.");
         }
     </script>
 </body>
