@@ -2,120 +2,177 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>English Training - Versão Final</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>English Training - Professional Check</title>
     <style>
-        :root { --primary: #1db954; --bg: #121212; --card: #282828; --text: #fff; }
+        :root { --primary: #1db954; --bg: #121212; --card: #282828; --text: #fff; --error: #e74c3c; }
         body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); display: flex; flex-direction: column; align-items: center; padding: 20px; margin: 0; }
-        .tabs { display: flex; gap: 10px; margin-bottom: 20px; }
-        .tab-btn { padding: 10px 25px; border-radius: 20px; border: none; cursor: pointer; background: var(--card); color: white; font-weight: bold; }
-        .tab-btn.active { background: var(--primary); }
-        .container { max-width: 800px; width: 100%; text-align: center; }
-        .card { background: var(--card); padding: 20px; border-radius: 15px; margin-bottom: 20px; box-shadow: 0 8px 25px rgba(0,0,0,0.5); }
-        input, textarea { width: 90%; padding: 12px; margin: 10px 0; border-radius: 8px; border: none; background: #3e3e3e; color: white; font-size: 16px; }
-        button { background: var(--primary); color: white; border: none; padding: 12px 30px; border-radius: 25px; font-weight: bold; cursor: pointer; transition: 0.3s; }
-        button:hover { background: #1ed760; transform: scale(1.02); }
-        #video-container { width: 100%; aspect-ratio: 16/9; background: #000; border-radius: 12px; margin: 20px 0; display: none; overflow: hidden; border: 2px solid #333; }
-        .word-box { display: inline-block; padding: 10px 15px; margin: 5px; border-radius: 6px; color: black; font-weight: bold; cursor: pointer; user-select: none; }
-        .answer-zone { min-height: 60px; background: #1a1a1a; border-bottom: 3px solid var(--primary); margin: 15px 0; padding: 10px; border-radius: 8px; display: flex; flex-wrap: wrap; justify-content: center; gap: 5px; }
+        .container { max-width: 700px; width: 100%; text-align: center; }
+        .card { background: var(--card); padding: 25px; border-radius: 15px; margin-bottom: 20px; box-shadow: 0 8px 25px rgba(0,0,0,0.5); }
+        textarea { width: 95%; padding: 15px; border-radius: 10px; border: none; background: #3e3e3e; color: white; font-size: 16px; margin-bottom: 15px; }
+        button { background: var(--primary); color: white; border: none; padding: 15px 40px; border-radius: 30px; font-weight: bold; cursor: pointer; transition: 0.3s; margin: 5px; }
+        
+        .progress-container { width: 100%; height: 10px; background: #333; border-radius: 5px; margin: 20px 0; display: none; }
+        #progress-bar { width: 0%; height: 100%; background: var(--primary); border-radius: 5px; transition: 0.5s; }
+
+        .answer-zone { 
+            min-height: 80px; background: #1a1a1a; border-bottom: 3px solid var(--primary); 
+            margin: 20px 0; padding: 15px; border-radius: 8px; 
+            display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; 
+        }
+        #words-pool { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; padding: 10px; min-height: 50px; }
+
+        .word-box { 
+            padding: 10px 15px; border-radius: 8px; cursor: pointer; 
+            font-weight: bold; color: #000; transition: 0.3s; white-space: nowrap; 
+        }
+        
+        /* Cores de Validação */
+        .correct-pos { border: 3px solid #00ff00 !important; transform: scale(1.05); }
+        .wrong-pos { border: 3px solid var(--error) !important; animation: shake 0.3s; }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
         .hidden { display: none; }
+        #status-msg { margin-top: 15px; font-weight: bold; min-height: 20px; }
     </style>
 </head>
 <body>
-    
 
-    <div class="tabs">
-        <button class="tab-btn active" id="btn-ord" onclick="tab('ord')">1. Ordenação</button>
-        <button class="tab-btn" id="btn-ass" onclick="tab('ass')">2. Associação</button>
-    </div>
+    <div class="container">
+        <h1>🎵 Lyric Sorter Multi-Check</h1>
 
-    <div class="container" id="base-ord">
-        <div class="card">
-            <h3>🎵 Passo 1: Link da Música</h3>
-            <input type="text" id="videoUrl" placeholder="Cole o link do YouTube aqui">
-            <button onclick="carregarVideo()">Carregar Música</button>
+        <div id="setup-screen" class="card">
+            <h3>Cole a letra da música</h3>
+            <textarea id="lyricsInput" rows="10" placeholder="Cole aqui..."></textarea>
+            <br>
+            <button onclick="iniciarJogo()">Começar Treinamento</button>
         </div>
 
-        <div id="video-container"></div>
-
-        <div class="card hidden" id="lyric-input-card">
-            <h3>📝 Passo 2: Letra em Inglês</h3>
-            <textarea id="lyricsInput" rows="5" placeholder="Cole a letra aqui (pule uma linha entre as estrofes)"></textarea>
-            <button onclick="gerarExercicio()">Gerar Desafio</button>
+        <div id="game-screen" class="hidden">
+            <div class="progress-container" id="p-container">
+                <div id="progress-bar"></div>
+            </div>
+            
+            <div class="card">
+                <h3 id="step-title">Parte 1</h3>
+                <div class="answer-zone" id="answer-zone"></div>
+                <div id="words-pool"></div>
+                
+                <div id="status-msg"></div>
+                <br>
+                <button onclick="verificarTudo()">Verificar Resposta</button>
+            </div>
         </div>
-
-        <div id="exercise-board"></div>
-    </div>
-
-    <div class="container hidden" id="base-ass">
-        <div class="card"><h2>Base de Associação - Em breve</h2></div>
     </div>
 
     <script>
-        function tab(tipo) {
-            document.getElementById('base-ord').classList.toggle('hidden', tipo !== 'ord');
-            document.getElementById('base-ass').classList.toggle('hidden', tipo !== 'ass');
-            document.getElementById('btn-ord').classList.toggle('active', tipo === 'ord');
-            document.getElementById('btn-ass').classList.toggle('active', tipo === 'ass');
+        let partesMusica = [];
+        let indexAtual = 0;
+        let fraseOriginalArray = [];
+        const cores = ['#FFADAD', '#FFD6A5', '#FDFFB6', '#CAFFBF', '#9BF6FF', '#A0C4FF', '#BDB2FF'];
+
+        function iniciarJogo() {
+            const rawText = document.getElementById('lyricsInput').value.trim();
+            if (!rawText) return;
+
+            let blocosIniciais = rawText.split(/\n\s*\n/);
+            partesMusica = [];
+
+            blocosIniciais.forEach(bloco => {
+                let linhas = bloco.split('\n').filter(l => l.trim() !== "");
+                for (let i = 0; i < linhas.length; i += 2) {
+                    partesMusica.push(linhas.slice(i, i + 2).join(' '));
+                }
+            });
+
+            document.getElementById('setup-screen').classList.add('hidden');
+            document.getElementById('game-screen').classList.remove('hidden');
+            document.getElementById('p-container').style.display = 'block';
+            carregarParte();
         }
 
-        function carregarVideo() {
-            const url = document.getElementById('videoUrl').value.trim();
-            if(!url) return alert("Por favor, cole um link!");
+        function carregarParte() {
+            const pool = document.getElementById('words-pool');
+            const zone = document.getElementById('answer-zone');
+            zone.innerHTML = "";
+            pool.innerHTML = "";
+            document.getElementById('status-msg').innerText = "";
 
-            let vId = "";
-            // Regex universal para pegar ID do YouTube
-            const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
-            const match = url.match(regExp);
+            const total = partesMusica.length;
+            document.getElementById('step-title').innerText = `Parte ${indexAtual + 1} de ${total}`;
+            document.getElementById('progress-bar').style.width = `${(indexAtual / total) * 100}%`;
 
-            if (match && match[2].length === 11) {
-                vId = match[2];
-                const container = document.getElementById('video-container');
-                // Forçamos a reconstrução do iframe para evitar bloqueios de API
-                container.innerHTML = `<iframe width="100%" height="100%" src="https://youtube.com{vId}" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
-                container.style.display = "block";
-                document.getElementById('lyric-input-card').classList.remove('hidden');
+            fraseOriginalArray = partesMusica[indexAtual].split(/\s+/).filter(p => p.trim().length > 0);
+            let embaralhadas = [...fraseOriginalArray].sort(() => Math.random() - 0.5);
+
+            embaralhadas.forEach(p => {
+                const span = document.createElement('span');
+                span.className = 'word-box';
+                span.innerText = p;
+                span.style.backgroundColor = cores[Math.floor(Math.random() * cores.length)];
+                
+                span.onclick = () => {
+                    if (span.parentElement === pool) zone.appendChild(span);
+                    else pool.appendChild(span);
+                    // Remove as cores de erro/acerto ao mexer na palavra
+                    span.classList.remove('correct-pos', 'wrong-pos');
+                };
+                pool.appendChild(span);
+            });
+        }
+
+        function verificarTudo() {
+            const zone = document.getElementById('answer-zone');
+            const status = document.getElementById('status-msg');
+            const palavrasUsuario = Array.from(zone.children);
+
+            if (palavrasUsuario.length < fraseOriginalArray.length) {
+                status.innerText = "⚠️ Termine de montar a frase primeiro!";
+                status.style.color = "orange";
+                return;
+            }
+
+            let todosCorretos = true;
+
+            palavrasUsuario.forEach((span, i) => {
+                // Compara o texto da palavra na posição 'i' com a original
+                if (span.innerText === fraseOriginalArray[i]) {
+                    span.classList.remove('wrong-pos');
+                    span.classList.add('correct-pos');
+                } else {
+                    span.classList.remove('correct-pos');
+                    span.classList.add('wrong-pos');
+                    todosCorretos = false;
+                }
+            });
+
+            if (todosCorretos) {
+                status.innerText = "✅ Perfeito! Tudo correto.";
+                status.style.color = "var(--primary)";
+                setTimeout(() => {
+                    indexAtual++;
+                    if (indexAtual < partesMusica.length) carregarParte();
+                    else finalizar();
+                }, 1500);
             } else {
-                alert("Link inválido! Certifique-se de que é um link comum do YouTube.");
+                status.innerText = "❌ Algumas palavras estão fora de lugar.";
+                status.style.color = "var(--error)";
             }
         }
 
-        function gerarExercicio() {
-            const text = document.getElementById('lyricsInput').value.trim();
-            if(!text) return alert("Cole a letra da música!");
-
-            const board = document.getElementById('exercise-board');
-            board.innerHTML = "";
-            const cores = ['#FFADAD', '#FFD6A5', '#FDFFB6', '#CAFFBF', '#9BF6FF', '#A0C4FF', '#BDB2FF'];
-
-            const estrofes = text.split(/\n\s*\n/);
-            estrofes.forEach((bloco, index) => {
-                const card = document.createElement('div');
-                card.className = 'card';
-                card.innerHTML = `<h4>Estrofe ${index + 1}</h4>`;
-
-                const zone = document.createElement('div');
-                zone.className = 'answer-zone';
-                
-                const pool = document.createElement('div');
-                let palavras = bloco.split(/\s+/).filter(p => p !== "");
-                palavras.sort(() => Math.random() - 0.5);
-
-                palavras.forEach(p => {
-                    const span = document.createElement('span');
-                    span.className = 'word-box';
-                    span.innerText = p;
-                    span.style.background = cores[Math.floor(Math.random() * cores.length)];
-                    span.onclick = () => {
-                        if(span.parentNode === pool) zone.appendChild(span);
-                        else pool.appendChild(span);
-                    };
-                    pool.appendChild(span);
-                });
-
-                card.append(zone, pool);
-                board.appendChild(card);
-            });
-            alert("Exercícios gerados! Ouça a música e ordene as palavras.");
+        function finalizar() {
+            document.getElementById('progress-bar').style.width = "100%";
+            document.getElementById('game-screen').innerHTML = `
+                <div class="card">
+                    <h2>🏆 Treino Finalizado!</h2>
+                    <p>Você concluiu todas as etapas.</p>
+                    <button onclick="location.reload()">Reiniciar</button>
+                </div>`;
         }
     </script>
 </body>
